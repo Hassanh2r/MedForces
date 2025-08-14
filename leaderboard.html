@@ -74,23 +74,37 @@
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('open');
         }
+
+        // Check login status and update header
+        function updateLoginStatus() {
+            const loginButton = document.getElementById('login-button');
+            const usernameDisplay = document.getElementById('username-display');
+            const username = localStorage.getItem('username');
+            if (username) {
+                loginButton.classList.add('hidden');
+                usernameDisplay.classList.remove('hidden');
+                usernameDisplay.innerText = username;
+            } else {
+                loginButton.classList.remove('hidden');
+                usernameDisplay.classList.add('hidden');
+            }
+        }
+
+        window.onload = updateLoginStatus;
     </script>
 </head>
 <body class="min-h-screen flex flex-col font-sans">
     <!-- Header -->
     <header class="w-full bg-white shadow-lg py-4 px-6 flex items-center justify-between">
         <div class="flex items-center">
-            <button onclick="toggleSidebar()" class="text-gray-700 text-2xl md:hidden mr-2">☰</button>
+            <button onclick="toggleSidebar()" class="text-gray-700 text-2xl mr-2">☰</button>
             <span class="text-3xl font-extrabold text-blue-600">MedForces</span>
         </div>
-        <div class="hidden md:flex space-x-4">
-            <a href="/index.html" class="text-blue-500 hover:text-blue-700 font-medium">Home</a>
-            <a href="/challenge.html" class="text-blue-500 hover:text-blue-700 font-medium">Challenges</a>
-            <a href="/questions.html" class="text-blue-500 hover:text-blue-700 font-medium">Questions</a>
-            <a href="/leaderboard.html" class="text-blue-500 hover:text-blue-700 font-medium">Leaderboard</a>
-            <a href="/profile.html" class="text-blue-500 hover:text-blue-700 font-medium">Profile</a>
+        <div class="flex items-center space-x-4">
+            <a id="login-button" href="/login.html" class="text-blue-500 hover:text-blue-700 font-medium">Login</a>
+            <span id="username-display" class="text-blue-500 font-medium hidden"></span>
         </div>
-        <div id="sidebar" class="sidebar fixed top-0 left-0 h-full w-64 bg-white shadow-lg md:hidden">
+        <div id="sidebar" class="sidebar fixed top-0 left-0 h-full w-64 bg-white shadow-lg">
             <div class="flex justify-between items-center p-4 border-b">
                 <span class="text-xl font-bold text-blue-600">Menu</span>
                 <button onclick="toggleSidebar()" class="text-gray-700 text-2xl">☰</button>
@@ -106,40 +120,23 @@
     </header>
 
     <!-- Main Content -->
-    <main class="flex-grow w-full max-w-4xl mx-auto px-4 py-12">
-        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center">Leaderboard</h1>
+    <main class="flex-grow w-full max-w-4xl mx-auto px-4 py-12 text-center">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6">Leaderboard</h1>
         <div class="card bg-white rounded-xl shadow-md p-6">
-            <table class="w-full text-left">
-                <thead>
-                    <tr class="border-b">
-                        <th class="py-2 text-blue-600">Rank</th>
-                        <th class="py-2 text-blue-600">Name</th>
-                        <th class="py-2 text-blue-600">Rating</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="border-b">
-                        <td class="py-2">1</td>
-                        <td class="py-2">John Doe</td>
-                        <td class="py-2">1500</td>
-                    </tr>
-                    <tr class="border-b">
-                        <td class="py-2">2</td>
-                        <td class="py-2">Jane Smith</td>
-                        <td class="py-2">1450</td>
-                    </tr>
-                    <tr class="border-b">
-                        <td class="py-2">3</td>
-                        <td class="py-2">Ahmed Ali</td>
-                        <td class="py-2">1400</td>
-                    </tr>
-                    <tr>
-                        <td class="py-2">4</td>
-                        <td class="py-2">Sara Khan</td>
-                        <td class="py-2">1350</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="flex flex-col space-y-4">
+                <div class="flex justify-between items-center p-4 border-b">
+                    <span class="text-lg font-semibold text-gray-700">1. John Doe</span>
+                    <span class="text-blue-600 font-medium">1800</span>
+                </div>
+                <div class="flex justify-between items-center p-4 border-b">
+                    <span class="text-lg font-semibold text-gray-700">2. Jane Smith</span>
+                    <span class="text-blue-600 font-medium">1750</span>
+                </div>
+                <div class="flex justify-between items-center p-4 border-b">
+                    <span class="text-lg font-semibold text-gray-700">3. Ahmed Ali</span>
+                    <span class="text-blue-600 font-medium">1700</span>
+                </div>
+            </div>
         </div>
     </main>
 

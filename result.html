@@ -74,23 +74,37 @@
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('open');
         }
+
+        // Check login status and update header
+        function updateLoginStatus() {
+            const loginButton = document.getElementById('login-button');
+            const usernameDisplay = document.getElementById('username-display');
+            const username = localStorage.getItem('username');
+            if (username) {
+                loginButton.classList.add('hidden');
+                usernameDisplay.classList.remove('hidden');
+                usernameDisplay.innerText = username;
+            } else {
+                loginButton.classList.remove('hidden');
+                usernameDisplay.classList.add('hidden');
+            }
+        }
+
+        window.onload = updateLoginStatus;
     </script>
 </head>
 <body class="min-h-screen flex flex-col font-sans">
     <!-- Header -->
     <header class="w-full bg-white shadow-lg py-4 px-6 flex items-center justify-between">
         <div class="flex items-center">
-            <button onclick="toggleSidebar()" class="text-gray-700 text-2xl md:hidden mr-2">☰</button>
+            <button onclick="toggleSidebar()" class="text-gray-700 text-2xl mr-2">☰</button>
             <span class="text-3xl font-extrabold text-blue-600">MedForces</span>
         </div>
-        <div class="hidden md:flex space-x-4">
-            <a href="/index.html" class="text-blue-500 hover:text-blue-700 font-medium">Home</a>
-            <a href="/challenge.html" class="text-blue-500 hover:text-blue-700 font-medium">Challenges</a>
-            <a href="/questions.html" class="text-blue-500 hover:text-blue-700 font-medium">Questions</a>
-            <a href="/leaderboard.html" class="text-blue-500 hover:text-blue-700 font-medium">Leaderboard</a>
-            <a href="/profile.html" class="text-blue-500 hover:text-blue-700 font-medium">Profile</a>
+        <div class="flex items-center space-x-4">
+            <a id="login-button" href="/login.html" class="text-blue-500 hover:text-blue-700 font-medium">Login</a>
+            <span id="username-display" class="text-blue-500 font-medium hidden"></span>
         </div>
-        <div id="sidebar" class="sidebar fixed top-0 left-0 h-full w-64 bg-white shadow-lg md:hidden">
+        <div id="sidebar" class="sidebar fixed top-0 left-0 h-full w-64 bg-white shadow-lg">
             <div class="flex justify-between items-center p-4 border-b">
                 <span class="text-xl font-bold text-blue-600">Menu</span>
                 <button onclick="toggleSidebar()" class="text-gray-700 text-2xl">☰</button>
