@@ -44,6 +44,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedForces - Challenge</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             background: linear-gradient(135deg, #e6f3ff 0%, #f0f9ff 100%);
@@ -70,22 +71,28 @@
         }
     </style>
     <script>
+        const supabaseUrl = 'https://vbyvvclgfszfbnwbzmfs.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZieXZ2Y2xnZnN6ZmJud2J6bWZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTkyMjIsImV4cCI6MjA3MDgzNTIyMn0.ZqzTst4Odq6dqTdo0X1IB8fZxjsGtkPDTgAtITaQwHs';
+        const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('open');
         }
 
-        // Check login status and update header
-        function updateLoginStatus() {
+        async function updateLoginStatus() {
             const loginButton = document.getElementById('login-button');
             const usernameDisplay = document.getElementById('username-display');
             const logoutButton = document.getElementById('logout-button');
-            const username = localStorage.getItem('username');
-            if (username) {
-                loginButton.classList.add('hidden');
-                usernameDisplay.classList.remove('hidden');
-                logoutButton.classList.remove('hidden');
-                usernameDisplay.innerText = username;
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data, error } = await supabase.from('users').select('username').eq('email', user.email).single();
+                if (!error && data) {
+                    loginButton.classList.add('hidden');
+                    usernameDisplay.classList.remove('hidden');
+                    logoutButton.classList.remove('hidden');
+                    usernameDisplay.innerText = data.username;
+                }
             } else {
                 loginButton.classList.remove('hidden');
                 usernameDisplay.classList.add('hidden');
@@ -93,8 +100,8 @@
             }
         }
 
-        // Handle logout
-        function handleLogout() {
+        async function handleLogout() {
+            await supabase.auth.signOut();
             localStorage.removeItem('username');
             window.location.href = '/login.html';
         }
@@ -114,9 +121,92 @@
             }, 1000);
         }
 
+        async function loadQuestions() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const category = urlParams.get('category') || '';
+            let query = supabase.from('questions').select('*');
+            if (category) {
+                query = query.eq('category', category);
+            }
+            const { data, error } = await query;
+            if (error) {
+                console.error('Error loading questions:', error);
+                return;
+            }
+            const container = document.getElementById('questions-container');
+            container.innerHTML = '';
+            data.forEach((q, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'card bg-white rounded-xl shadow-md p-6 mb-6';
+                questionDiv.innerHTML = `
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">${q.question_text}</h3>
+                    <div class="space-y-2">
+                        ${q.options.map((option, i) => `
+                            <label class="flex items-center">
+                                <input type="radio" name="q${index}" value="${i}" class="mr-2" required>
+                                <span class="text-gray-700">${option}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(questionDiv);
+            });
+        }
+
+        async function handleSubmit(event) {
+            event.preventDefault();
+            const form = document.getElementById('challenge-form');
+            const formData = new FormData(form);
+            let score = 0;
+            const urlParams = new URLSearchParams(window.location.search);
+            const category = urlParams.get('category') || '';
+            let query = supabase.from('questions').select('*');
+            if (category) {
+                query = query.eq('category', category);
+            }
+            const { data: questions, error } = await query;
+            if (error) {
+                console.error('Error fetching questions:', error);
+                return;
+            }
+            questions.forEach((q, index) => {
+                if (formData.get(`q${index}`) == q.correct_answer) score++;
+            });
+
+            // Save submission to submissions table
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: userData } = await supabase.from('users').select('id, rating, challenges_completed, correct_answer_rate').eq('email', user.email).single();
+                if (userData) {
+                    const newChallengesCompleted = userData.challenges_completed + 1;
+                    const totalCorrect = userData.correct_answer_rate * userData.challenges_completed + score;
+                    const newCorrectAnswerRate = (totalCorrect / newChallengesCompleted).toFixed(2);
+                    const newRating = userData.rating + score * 10;
+
+                    await supabase.from('submissions').insert([{
+                        user_id: userData.id,
+                        score: score,
+                        total_questions: questions.length,
+                        category: category || 'General'
+                    }]);
+
+                    await supabase.from('users').update({
+                        rating: newRating,
+                        challenges_completed: newChallengesCompleted,
+                        correct_answer_rate: newCorrectAnswerRate
+                    }).eq('id', userData.id);
+                }
+            }
+
+            localStorage.setItem('score', score);
+            localStorage.setItem('total', questions.length);
+            window.location.href = '/result.html';
+        }
+
         window.onload = function() {
             updateLoginStatus();
             startTimer();
+            loadQuestions();
         };
     </script>
 </head>
@@ -151,51 +241,8 @@
     <main class="flex-grow w-full max-w-4xl mx-auto px-4 py-12">
         <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6 text-center">Medical Challenge</h1>
         <p id="timer" class="text-lg text-gray-700 mb-8 text-center">Time: 20:00</p>
-        <form id="challenge-form" action="/result.html" method="POST">
-            <!-- Sample Question 1 -->
-            <div class="card bg-white rounded-xl shadow-md p-6 mb-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">What is the most common cause of acute pancreatitis?</h3>
-                <div class="space-y-2">
-                    <label class="flex items-center">
-                        <input type="radio" name="q1" value="0" class="mr-2" required>
-                        <span class="text-gray-700">Gallstones</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="radio" name="q1" value="1" class="mr-2">
-                        <span class="text-gray-700">Alcohol</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="radio" name="q1" value="2" class="mr-2">
-                        <span class="text-gray-700">Hypertriglyceridemia</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="radio" name="q1" value="3" class="mr-2">
-                        <span class="text-gray-700">Medications</span>
-                    </label>
-                </div>
-            </div>
-            <!-- Sample Question 2 -->
-            <div class="card bg-white rounded-xl shadow-md p-6 mb-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">A 45-year-old male presents with severe epigastric pain radiating to the back. What is the likely diagnosis?</h3>
-                <div class="space-y-2">
-                    <label class="flex items-center">
-                        <input type="radio" name="q2" value="0" class="mr-2" required>
-                        <span class="text-gray-700">Acute pancreatitis</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="radio" name="q2" value="1" class="mr-2">
-                        <span class="text-gray-700">Myocardial infarction</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="radio" name="q2" value="2" class="mr-2">
-                        <span class="text-gray-700">Peptic ulcer</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="radio" name="q2" value="3" class="mr-2">
-                        <span class="text-gray-700">Cholecystitis</span>
-                    </label>
-                </div>
-            </div>
+        <form id="challenge-form" onsubmit="handleSubmit(event)">
+            <div id="questions-container"></div>
             <button type="submit" class="btn text-white px-6 py-3 rounded-md font-medium w-full md:w-auto">Submit</button>
         </form>
     </main>

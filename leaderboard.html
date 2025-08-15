@@ -44,6 +44,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedForces - Leaderboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             background: linear-gradient(135deg, #e6f3ff 0%, #f0f9ff 100%);
@@ -70,22 +71,28 @@
         }
     </style>
     <script>
+        const supabaseUrl = 'https://vbyvvclgfszfbnwbzmfs.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZieXZ2Y2xnZnN6ZmJud2J6bWZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTkyMjIsImV4cCI6MjA3MDgzNTIyMn0.ZqzTst4Odq6dqTdo0X1IB8fZxjsGtkPDTgAtITaQwHs';
+        const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('open');
         }
 
-        // Check login status and update header
-        function updateLoginStatus() {
+        async function updateLoginStatus() {
             const loginButton = document.getElementById('login-button');
             const usernameDisplay = document.getElementById('username-display');
             const logoutButton = document.getElementById('logout-button');
-            const username = localStorage.getItem('username');
-            if (username) {
-                loginButton.classList.add('hidden');
-                usernameDisplay.classList.remove('hidden');
-                logoutButton.classList.remove('hidden');
-                usernameDisplay.innerText = username;
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data, error } = await supabase.from('users').select('username').eq('email', user.email).single();
+                if (!error && data) {
+                    loginButton.classList.add('hidden');
+                    usernameDisplay.classList.remove('hidden');
+                    logoutButton.classList.remove('hidden');
+                    usernameDisplay.innerText = data.username;
+                }
             } else {
                 loginButton.classList.remove('hidden');
                 usernameDisplay.classList.add('hidden');
@@ -93,13 +100,35 @@
             }
         }
 
-        // Handle logout
-        function handleLogout() {
+        async function handleLogout() {
+            await supabase.auth.signOut();
             localStorage.removeItem('username');
             window.location.href = '/login.html';
         }
 
-        window.onload = updateLoginStatus;
+        async function loadLeaderboard() {
+            const { data, error } = await supabase.from('users').select('username, rating').order('rating', { ascending: false }).limit(10);
+            if (error) {
+                console.error('Error loading leaderboard:', error);
+                return;
+            }
+            const container = document.getElementById('leaderboard');
+            container.innerHTML = '';
+            data.forEach((user, index) => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-4 border-b';
+                div.innerHTML = `
+                    <span class="text-lg font-semibold text-gray-700">${index + 1}. ${user.username}</span>
+                    <span class="text-blue-600 font-medium">${user.rating}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.onload = function() {
+            updateLoginStatus();
+            loadLeaderboard();
+        };
     </script>
 </head>
 <body class="min-h-screen flex flex-col font-sans">
@@ -133,20 +162,7 @@
     <main class="flex-grow w-full max-w-4xl mx-auto px-4 py-12 text-center">
         <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-6">Leaderboard</h1>
         <div class="card bg-white rounded-xl shadow-md p-6">
-            <div class="flex flex-col space-y-4">
-                <div class="flex justify-between items-center p-4 border-b">
-                    <span class="text-lg font-semibold text-gray-700">1. John Doe</span>
-                    <span class="text-blue-600 font-medium">1800</span>
-                </div>
-                <div class="flex justify-between items-center p-4 border-b">
-                    <span class="text-lg font-semibold text-gray-700">2. Jane Smith</span>
-                    <span class="text-blue-600 font-medium">1750</span>
-                </div>
-                <div class="flex justify-between items-center p-4 border-b">
-                    <span class="text-lg font-semibold text-gray-700">3. Ahmed Ali</span>
-                    <span class="text-blue-600 font-medium">1700</span>
-                </div>
-            </div>
+            <div id="leaderboard" class="flex flex-col space-y-4"></div>
         </div>
     </main>
 
