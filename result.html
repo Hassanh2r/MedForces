@@ -79,15 +79,24 @@
         function updateLoginStatus() {
             const loginButton = document.getElementById('login-button');
             const usernameDisplay = document.getElementById('username-display');
+            const logoutButton = document.getElementById('logout-button');
             const username = localStorage.getItem('username');
             if (username) {
                 loginButton.classList.add('hidden');
                 usernameDisplay.classList.remove('hidden');
+                logoutButton.classList.remove('hidden');
                 usernameDisplay.innerText = username;
             } else {
                 loginButton.classList.remove('hidden');
                 usernameDisplay.classList.add('hidden');
+                logoutButton.classList.add('hidden');
             }
+        }
+
+        // Handle logout
+        function handleLogout() {
+            localStorage.removeItem('username');
+            window.location.href = '/login.html';
         }
 
         window.onload = updateLoginStatus;
@@ -103,6 +112,7 @@
         <div class="flex items-center space-x-4">
             <a id="login-button" href="/login.html" class="text-blue-500 hover:text-blue-700 font-medium">Login</a>
             <span id="username-display" class="text-blue-500 font-medium hidden"></span>
+            <button id="logout-button" onclick="handleLogout()" class="text-red-500 hover:text-red-700 font-medium hidden">Logout</button>
         </div>
         <div id="sidebar" class="sidebar fixed top-0 left-0 h-full w-64 bg-white shadow-lg">
             <div class="flex justify-between items-center p-4 border-b">
@@ -133,7 +143,7 @@
 
     <!-- Footer -->
     <footer class="w-full bg-gray-800 py-4 text-center text-gray-300">
-        <p>&copy; 2025 MedForces. All rights reserved.</p>
+        <p class="text-gray-300 text-sm">&copy; 2025 MedForces. Created by <span class="font-semibold text-blue-400">Hassan Hassani</span>. All rights reserved.</p>
     </footer>
 </body>
 </html>
