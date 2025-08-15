@@ -86,7 +86,7 @@
             const logoutButton = document.getElementById('logout-button');
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                const { data, error } = await supabase.from('users').select('username').eq('email', user.email).single();
+                const { data, error } = await supabase.from('users').select('username').eq('id', user.id).single();
                 if (!error && data) {
                     loginButton.classList.add('hidden');
                     usernameDisplay.classList.remove('hidden');
@@ -101,9 +101,12 @@
         }
 
         async function handleLogout() {
-            await supabase.auth.signOut();
-            localStorage.removeItem('username');
-            window.location.href = '/login.html';
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                alert('Error logging out: ' + error.message);
+            } else {
+                window.location.href = '/login.html';
+            }
         }
 
         async function loadLeaderboard() {

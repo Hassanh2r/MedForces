@@ -86,7 +86,7 @@
             const logoutButton = document.getElementById('logout-button');
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                const { data, error } = await supabase.from('users').select('username').eq('email', user.email).single();
+                const { data, error } = await supabase.from('users').select('username').eq('id', user.id).single();
                 if (!error && data) {
                     loginButton.classList.add('hidden');
                     usernameDisplay.classList.remove('hidden');
@@ -97,13 +97,17 @@
                 loginButton.classList.remove('hidden');
                 usernameDisplay.classList.add('hidden');
                 logoutButton.classList.add('hidden');
+                window.location.href = '/login.html'; // Redirect to login if not authenticated
             }
         }
 
         async function handleLogout() {
-            await supabase.auth.signOut();
-            localStorage.removeItem('username');
-            window.location.href = '/login.html';
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                alert('Error logging out: ' + error.message);
+            } else {
+                window.location.href = '/login.html';
+            }
         }
 
         function startTimer() {
@@ -173,10 +177,9 @@
                 if (formData.get(`q${index}`) == q.correct_answer) score++;
             });
 
-            // Save submission to submissions table
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                const { data: userData } = await supabase.from('users').select('id, rating, challenges_completed, correct_answer_rate').eq('email', user.email).single();
+                const { data: userData } = await supabase.from('users').select('id, rating, challenges_completed, correct_answer_rate').eq('id', user.id).single();
                 if (userData) {
                     const newChallengesCompleted = userData.challenges_completed + 1;
                     const totalCorrect = userData.correct_answer_rate * userData.challenges_completed + score;
