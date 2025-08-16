@@ -71,94 +71,114 @@
         }
     </style>
     <script>
-        const supabaseUrl = 'https://vbyvvclgfszfbnwbzmfs.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZieXZ2Y2xnZnN6ZmJud2J6bWZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTkyMjIsImV4cCI6MjA3MDgzNTIyMn0.ZqzTst4Odq6dqTdo0X1IB8fZxjsGtkPDTgAtITaQwHs';
-        const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = 'https://vbyvvclgfszfbnwbzmfs.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZieXZ2Y2xnZnN6ZmJud2J6bWZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTkyMjIsImV4cCI6MjA3MDgzNTIyMn0.ZqzTst4Odq6dqTdo0X1IB8fZxjsGtkPDTgAtITaQwHs';
+    const supabase = Supabase.createClient(supabaseUrl, supabaseKey);
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('open');
+    // Test Supabase connection
+    async function testSupabaseConnection() {
+        try {
+            const { data, error } = await supabase.from('users').select('id').limit(1);
+            if (error) {
+                console.error('Connection test failed:', error);
+                alert('Failed to connect to Supabase: ' + error.message);
+            } else {
+                console.log('Connection successful:', data);
+                alert('Successfully connected to Supabase!');
+            }
+        } catch (err) {
+            console.error('Unexpected error:', err);
+            alert('Unexpected error connecting to Supabase: ' + err.message);
+        }
+    }
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('open');
+    }
+
+    async function handleSignup(event) {
+        event.preventDefault();
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        // Validate inputs
+        if (!name || !email || !password) {
+            alert('Please fill in all fields.');
+            return;
+        }
+        if (password.length < 6) {
+            alert('Password must be at least 6 characters long.');
+            return;
         }
 
-        async function handleSignup(event) {
-            event.preventDefault();
-            const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+        // Sign up with Supabase Auth
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password
+        });
 
-            // Validate inputs
-            if (!name || !email || !password) {
-                alert('Please fill in all fields.');
-                return;
+        if (error) {
+            alert('Error signing up: ' + error.message);
+            console.error('Sign-up error:', error);
+            return;
+        }
+
+        // Insert user into 'users' table
+        const { error: insertError } = await supabase.from('users').insert([{
+            id: data.user.id,
+            username: name,
+            email: email,
+            rating: 1500,
+            challenges_completed: 0,
+            correct_answer_rate: 0
+        }]);
+
+        if (insertError) {
+            alert('Error saving user data: ' + insertError.message);
+            console.error('Insert error:', insertError);
+            return;
+        }
+
+        alert('Sign up successful! Please check your email to confirm your account.');
+        window.location.href = '/login.html';
+    }
+
+    async function updateLoginStatus() {
+        const loginButton = document.getElementById('login-button');
+        const usernameDisplay = document.getElementById('username-display');
+        const logoutButton = document.getElementById('logout-button');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data, error } = await supabase.from('users').select('username').eq('id', user.id).single();
+            if (!error && data) {
+                loginButton.classList.add('hidden');
+                usernameDisplay.classList.remove('hidden');
+                logoutButton.classList.remove('hidden');
+                usernameDisplay.innerText = data.username;
             }
-            if (password.length < 6) {
-                alert('Password must be at least 6 characters long.');
-                return;
-            }
+        } else {
+            loginButton.classList.remove('hidden');
+            usernameDisplay.classList.add('hidden');
+            logoutButton.classList.add('hidden');
+        }
+    }
 
-            // Sign up with Supabase Auth
-            const { data, error } = await supabase.auth.signUp({
-                email,
-                password
-            });
-
-            if (error) {
-                alert('Error signing up: ' + error.message);
-                console.error('Sign-up error:', error);
-                return;
-            }
-
-            // Insert user into 'users' table
-            const { error: insertError } = await supabase.from('users').insert([{
-                id: data.user.id,
-                username: name,
-                email: email,
-                rating: 1500,
-                challenges_completed: 0,
-                correct_answer_rate: 0
-            }]);
-
-            if (insertError) {
-                alert('Error saving user data: ' + insertError.message);
-                console.error('Insert error:', insertError);
-                return;
-            }
-
-            alert('Sign up successful! Please check your email to confirm your account.');
+    async function handleLogout() {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            alert('Error logging out: ' + error.message);
+        } else {
             window.location.href = '/login.html';
         }
+    }
 
-        async function updateLoginStatus() {
-            const loginButton = document.getElementById('login-button');
-            const usernameDisplay = document.getElementById('username-display');
-            const logoutButton = document.getElementById('logout-button');
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data, error } = await supabase.from('users').select('username').eq('id', user.id).single();
-                if (!error && data) {
-                    loginButton.classList.add('hidden');
-                    usernameDisplay.classList.remove('hidden');
-                    logoutButton.classList.remove('hidden');
-                    usernameDisplay.innerText = data.username;
-                }
-            } else {
-                loginButton.classList.remove('hidden');
-                usernameDisplay.classList.add('hidden');
-                logoutButton.classList.add('hidden');
-            }
-        }
-
-        async function handleLogout() {
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-                alert('Error logging out: ' + error.message);
-            } else {
-                window.location.href = '/login.html';
-            }
-        }
-
-        window.onload = updateLoginStatus;
-    </script>
+    window.onload = function() {
+        updateLoginStatus();
+        testSupabaseConnection(); // Test connection on page load
+    };
+</script>
 </head>
 <body class="min-h-screen flex flex-col font-sans">
     <!-- Header -->
